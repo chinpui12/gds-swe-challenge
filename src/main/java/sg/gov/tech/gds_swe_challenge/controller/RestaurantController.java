@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -50,9 +51,22 @@ public class RestaurantController {
             throw new IllegalArgumentException("X-Username header cannot be empty");
         }
         Restaurant restaurant = service.addRestaurant(request.name(), username);
-
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(restaurant);
+    }
+
+    /**
+     * Retrieves a **random restaurant** from the database.
+     *
+     * @return {@link ResponseEntity} containing:
+     */
+    @GetMapping("/random")
+    public ResponseEntity<Restaurant> getRandomRestaurant() {
+        LOGGER.info("getRandomRestaurant");
+        Restaurant restaurant = service.getRandomRestaurant();
+        return restaurant != null
+                ? ResponseEntity.ok(restaurant)
+                : ResponseEntity.notFound().build();
     }
 }

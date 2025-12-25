@@ -29,13 +29,12 @@ class RestaurantControllerTest {
     }
 
     @Test
-    void submitRestaurantSuccessfully() {
+    void submitRestaurant() {
         SubmitRestaurantRequest request = new SubmitRestaurantRequest("Kopitiam");
         Restaurant savedRestaurant = new Restaurant();
         savedRestaurant.setId(1L);
         savedRestaurant.setName("Kopitiam");
         savedRestaurant.setSubmittedBy("Test User");
-
         when(restaurantService.addRestaurant("Kopitiam", "Test User"))
                 .thenReturn(savedRestaurant);
 
@@ -75,5 +74,34 @@ class RestaurantControllerTest {
                 .body(request)
                 .exchange()
                 .expectStatus().is5xxServerError();
+    }
+
+    @Test
+    void getRandomRestaurant() {
+        Restaurant savedRestaurant = new Restaurant();
+        savedRestaurant.setId(1L);
+        savedRestaurant.setName("Pizza Hut");
+        when(restaurantService.getRandomRestaurant()).thenReturn(savedRestaurant);
+
+        client.get()
+                .uri("/restaurant/random")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Restaurant.class)
+                .value(restaurant -> {
+                    assertThat(restaurant).isNotNull();
+                    assertThat(restaurant.getName()).isEqualTo("Pizza Hut");
+                    assertThat(restaurant.getId()).isOne();
+                });
+    }
+
+    @Test
+    void getRandomRestaurant_NoRestaurants() {
+        when(restaurantService.getRandomRestaurant()).thenReturn(null);
+
+        client.get()
+                .uri("/restaurant/random")
+                .exchange()
+                .expectStatus().isNotFound();
     }
 }

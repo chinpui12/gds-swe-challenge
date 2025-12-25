@@ -1,6 +1,7 @@
 package sg.gov.tech.gds_swe_challenge.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import sg.gov.tech.gds_swe_challenge.entity.Restaurant;
 import sg.gov.tech.gds_swe_challenge.repository.RestaurantRepository;
 
@@ -20,4 +21,8 @@ public class RestaurantService {
         return repository.save(restaurant);
     }
 
+    @Transactional(readOnly = true)
+    public Restaurant getRandomRestaurant() {
+        return repository.findRandomRestaurant().orElse(null);
+    }
 }

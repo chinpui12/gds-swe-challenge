@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import sg.gov.tech.gds_swe_challenge.entity.Restaurant;
 import sg.gov.tech.gds_swe_challenge.repository.RestaurantRepository;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -83,5 +85,30 @@ class RestaurantServiceTest {
                 .hasMessage("Database error");
 
         verify(repository, times(1)).save(any(Restaurant.class));
+    }
+
+    @Test
+    void getRandomRestaurant_ShouldReturnRestaurant() {
+        Restaurant restaurant = new Restaurant();
+        restaurant.setId(1L);
+        restaurant.setName("Kopitiam");
+
+        when(repository.findRandomRestaurant()).thenReturn(Optional.of(restaurant));
+
+        Restaurant result = sut.getRandomRestaurant();
+
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("Kopitiam");
+        verify(repository, times(1)).findRandomRestaurant();
+    }
+
+    @Test
+    void getRandomRestaurant_NoRestaurants_ShouldReturnNull() {
+        when(repository.findRandomRestaurant()).thenReturn(Optional.empty());
+
+        Restaurant result = sut.getRandomRestaurant();
+
+        assertThat(result).isNull();
+        verify(repository, times(1)).findRandomRestaurant();
     }
 }
