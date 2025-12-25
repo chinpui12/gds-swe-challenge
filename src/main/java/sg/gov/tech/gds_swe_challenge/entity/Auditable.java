@@ -3,7 +3,9 @@ package sg.gov.tech.gds_swe_challenge.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -20,10 +22,11 @@ public abstract class Auditable {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    @CreatedBy
     @Column(updatable = false, length = 50)
     private String createdBy;
 
-    @Column(length = 50)
+    @LastModifiedBy
     private String updatedBy;
 
     public LocalDateTime getCreatedAt() {
