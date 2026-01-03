@@ -1,5 +1,10 @@
 package sg.gov.tech.gds_swe_challenge.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
@@ -25,6 +30,7 @@ import sg.gov.tech.gds_swe_challenge.service.RestaurantService;
 @RestController
 @RequestMapping(value = "/restaurant")
 @NullMarked
+@Tag(name = "Restaurant API", description = "Restaurant submission and selection")
 public class RestaurantController {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestaurantController.class);
     private final RestaurantService service;
@@ -44,6 +50,14 @@ public class RestaurantController {
      * @param username submitter username from X-Username header
      * @return {@link ResponseEntity} with 201 Created + {@link Restaurant} or error response
      */
+    @Operation(
+            summary = "Submit restaurant to session",
+            description = "Adds restaurant to specified session (creates if new)"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Restaurant created"),
+            @ApiResponse(responseCode = "400", description = "Validation failed/Session closed")
+    })
     @PostMapping("/submit")
     public ResponseEntity<Restaurant> submitRestaurant(
             @Valid @RequestBody SubmitRestaurantRequest request,
@@ -62,8 +76,10 @@ public class RestaurantController {
      * @param username  X-Username header
      * @return {@link ResponseEntity}
      */
+    @Operation(summary = "Get random restaurant")
     @GetMapping("/random")
     public ResponseEntity<Restaurant> getRandomRestaurant(
+            @Parameter(description = "Session ID (default: GLOBAL=0)")
             @RequestParam(value = "sessionId", defaultValue = AppConstants.GLOBAL_SESSION_ID_STR) String sessionId,
             @RequestHeader(AppConstants.HEADER_X_USERNAME) String username) {
         LOGGER.info("getRandomRestaurant [sessionId: {}, username: {}]", sessionId, username);
