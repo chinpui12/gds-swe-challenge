@@ -2,6 +2,8 @@ package sg.gov.tech.gds_swe_challenge.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
 import sg.gov.tech.gds_swe_challenge.dto.SubmitRestaurantRequest;
 import sg.gov.tech.gds_swe_challenge.entity.Restaurant;
 import sg.gov.tech.gds_swe_challenge.repository.RestaurantRepository;
@@ -12,7 +14,7 @@ public class RestaurantService {
     private final SessionService sessionService;
 
     public RestaurantService(RestaurantRepository repository,
-                             SessionService sessionService) {
+            SessionService sessionService) {
         this.restaurantRepository = repository;
         this.sessionService = sessionService;
     }
@@ -35,7 +37,7 @@ public class RestaurantService {
             throw new IllegalStateException("Session is already closed, a random restaurant has already been selected");
         }
         var session = sessionService.getOpenSession(sessionId);
-        if (!session.getCreatedBy().equals(username)) {
+        if (!session.getId().equals(AppConstants.GLOBAL_SESSION_ID) && !session.getCreatedBy().equals(username)) {
             throw new IllegalStateException(
                     "Only the user who submitted the first restaurant may make the request: [initiator: %s]".formatted(
                             session.getCreatedBy()));
