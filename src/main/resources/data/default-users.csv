@@ -1,0 +1,5 @@
+username,canInitiateSession
+alice,true
+bob,false
+charlie,true
+dave,false
