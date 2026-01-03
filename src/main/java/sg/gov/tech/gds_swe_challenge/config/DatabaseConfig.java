@@ -1,10 +1,14 @@
 package sg.gov.tech.gds_swe_challenge.config;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
 
 import java.util.Optional;
 
@@ -20,9 +24,17 @@ public class DatabaseConfig {
         @Override
         @NullMarked
         public Optional<String> getCurrentAuditor() {
-            // Extract from X-Username header or SecurityContext
-            // For now, get from request context or default to 'system'
-            return Optional.of("SYSTEM");
+            ServletRequestAttributes attributes = (ServletRequestAttributes)
+                    RequestContextHolder.getRequestAttributes();
+
+            if (attributes != null) {
+                HttpServletRequest request = attributes.getRequest();
+                String username = request.getHeader(AppConstants.HEADER_X_USERNAME);
+                if (username != null && !username.trim().isEmpty()) {
+                    return Optional.of(username.trim());
+                }
+            }
+            return Optional.of(AppConstants.SYSTEM);
         }
     }
 }

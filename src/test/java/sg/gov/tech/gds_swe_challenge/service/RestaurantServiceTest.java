@@ -3,9 +3,13 @@ package sg.gov.tech.gds_swe_challenge.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
+import sg.gov.tech.gds_swe_challenge.dto.SubmitRestaurantRequest;
 import sg.gov.tech.gds_swe_challenge.entity.Restaurant;
+import sg.gov.tech.gds_swe_challenge.entity.Session;
 import sg.gov.tech.gds_swe_challenge.repository.RestaurantRepository;
 
 import java.util.Optional;
@@ -13,7 +17,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,69 +29,55 @@ import static org.mockito.Mockito.when;
 class RestaurantServiceTest {
     @Mock
     private RestaurantRepository repository;
+    @Mock
+    private SessionService sessionService;
 
     private RestaurantService sut;
 
     @BeforeEach
     void setup() {
-        sut = new RestaurantService(repository);
+        sut = new RestaurantService(repository, sessionService);
     }
 
     @Test
     void addRestaurant_ShouldCreateAndSaveRestaurant() {
-        String name = "Kopitiam";
-        String submittedBy = "Test User";
-        Restaurant savedRestaurant = new Restaurant();
-        savedRestaurant.setId(1L);
-        savedRestaurant.setName("Kopitiam");
-        savedRestaurant.setSubmittedBy("Test User");
+        String sessionName = AppConstants.GLOBAL_SESSION_NAME;
+        SubmitRestaurantRequest request = new SubmitRestaurantRequest("Kopitiam");
+        String createdBy = "Test User";
 
-        when(repository.save(any(Restaurant.class))).thenReturn(savedRestaurant);
+        Session savedSession = new Session();
+        savedSession.setName(sessionName);
+        savedSession.setId(AppConstants.GLOBAL_SESSION_ID);
+        when(sessionService.getOrCreateSession(AppConstants.GLOBAL_SESSION_ID, sessionName))
+                .thenReturn(savedSession);
 
-        Restaurant result = sut.addRestaurant(name, submittedBy);
+        sut.addRestaurant(request);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isOne();
-        assertThat(result.getName()).isEqualTo(name);
-        assertThat(result.getSubmittedBy()).isEqualTo(submittedBy);
+        ArgumentCaptor<Restaurant> restaurantCaptor = ArgumentCaptor.forClass(Restaurant.class);
+        verify(repository).saveAndFlush(restaurantCaptor.capture());
+        Restaurant savedRestaurant = restaurantCaptor.getValue();
+        assertThat(savedRestaurant.getName()).isEqualTo("Kopitiam");
+        assertThat(savedRestaurant.getSession()).isSameAs(savedSession);
 
-        verify(repository, times(1)).save(argThat(restaurant ->
-                restaurant.getName().equals(name) &&
-                        restaurant.getSubmittedBy().equals(submittedBy)
-        ));
+        verify(sessionService).getOrCreateSession(AppConstants.GLOBAL_SESSION_ID, sessionName);
+        verify(repository).saveAndFlush(argThat(restaurant ->
+                restaurant.getName().equals("Kopitiam") &&
+                        restaurant.getSession().equals(savedSession)));
     }
 
-    @Test
-    void addRestaurant_ShouldSetCorrectFields() {
-        String name = "Pizza Hut";
-        String submittedBy = "Test User";
-
-        when(repository.save(any(Restaurant.class)))
-                .thenAnswer(invocation -> {
-                    Restaurant restaurant = invocation.getArgument(0);
-                    restaurant.setId(2L);
-                    return restaurant;
-                });
-
-        Restaurant result = sut.addRestaurant(name, submittedBy);
-
-        assertThat(result.getName()).isEqualTo(name);
-        assertThat(result.getSubmittedBy()).isEqualTo(submittedBy);
-        assertThat(result.getId()).isEqualTo(2L);
-    }
 
     @Test
     void addRestaurant_RepositoryThrowsException_ShouldPropagate() {
         String name = "KFC";
-        String submittedBy = "Test User";
-        when(repository.save(any(Restaurant.class)))
+        when(repository.saveAndFlush(any(Restaurant.class)))
                 .thenThrow(new RuntimeException("Database error"));
+        when(sessionService.getOrCreateSession(anyLong(), anyString())).thenReturn(null);
 
-        assertThatThrownBy(() -> sut.addRestaurant(name, submittedBy))
+        assertThatThrownBy(() -> sut.addRestaurant(new SubmitRestaurantRequest(name)))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Database error");
 
-        verify(repository, times(1)).save(any(Restaurant.class));
+        verify(repository, times(1)).saveAndFlush(any(Restaurant.class));
     }
 
     @Test
@@ -93,22 +86,28 @@ class RestaurantServiceTest {
         restaurant.setId(1L);
         restaurant.setName("Kopitiam");
 
-        when(repository.findRandomRestaurant()).thenReturn(Optional.of(restaurant));
+        when(repository.findRandomRestaurantBySession(1L)).thenReturn(Optional.of(restaurant));
 
-        Restaurant result = sut.getRandomRestaurant();
+        Restaurant result = sut.getRandomRestaurant(1L);
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("Kopitiam");
-        verify(repository, times(1)).findRandomRestaurant();
+        verify(repository, times(1)).findRandomRestaurantBySession(1L);
     }
 
     @Test
     void getRandomRestaurant_NoRestaurants_ShouldReturnNull() {
-        when(repository.findRandomRestaurant()).thenReturn(Optional.empty());
+        long sessionId = 1L;
+        when(repository.findRandomRestaurantBySession(sessionId)).thenReturn(Optional.empty());
 
-        Restaurant result = sut.getRandomRestaurant();
+        assertThatThrownBy(() -> sut.getRandomRestaurant(sessionId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("No restaurants available in session: 1");
 
-        assertThat(result).isNull();
-        verify(repository, times(1)).findRandomRestaurant();
+
+        verify(sessionService).isSessionClosed(sessionId);
+        verify(repository).findRandomRestaurantBySession(sessionId);
+        verify(sessionService, never()).closeSession(anyLong(), anyString());
+
     }
 }

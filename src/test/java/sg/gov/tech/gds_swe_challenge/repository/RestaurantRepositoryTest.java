@@ -7,6 +7,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import sg.gov.tech.gds_swe_challenge.config.TestConfig;
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
 import sg.gov.tech.gds_swe_challenge.entity.Restaurant;
 import sg.gov.tech.gds_swe_challenge.entity.Session;
 
@@ -33,8 +34,6 @@ class RestaurantRepositoryTest {
         Restaurant restaurant = new Restaurant();
         restaurant.setName("Kopitiam");
         restaurant.setSession(testSession);
-        restaurant.setSubmittedBy("Test User");
-
 
         Restaurant saved = restaurantRepository.save(restaurant);
         entityManager.flush();
@@ -42,12 +41,12 @@ class RestaurantRepositoryTest {
         assertThat(saved.getId()).isNotNull();
         assertThat(saved.getName()).isEqualTo("Kopitiam");
         assertThat(saved.getSession()).isEqualTo(testSession);
-        assertThat(saved.getSubmittedBy()).isEqualTo("Test User");
+        assertThat(saved.getCreatedBy()).isEqualTo(AppConstants.SYSTEM);
     }
 
     @Test
     void shouldFindById() {
-        Restaurant restaurant = createTestRestaurant("Din Tai Fung", "Test User");
+        Restaurant restaurant = createTestRestaurant("Din Tai Fung");
         Long restaurantId = restaurant.getId();
 
         Restaurant found = restaurantRepository.findById(restaurantId).orElse(null);
@@ -55,12 +54,12 @@ class RestaurantRepositoryTest {
         assertThat(found).isNotNull();
         assertThat(found.getName()).isEqualTo("Din Tai Fung");
         assertThat(found.getSession()).isEqualTo(testSession);
-        assertThat(found.getSubmittedBy()).isEqualTo("Test User");
+        assertThat(found.getCreatedBy()).isEqualTo(AppConstants.SYSTEM);
     }
 
     @Test
     void shouldDeleteRestaurant() {
-        Restaurant restaurant = createTestRestaurant("Burger King", "Test User");
+        Restaurant restaurant = createTestRestaurant("Burger King");
         Long restaurantId = restaurant.getId();
 
         restaurantRepository.deleteById(restaurantId);
@@ -69,11 +68,10 @@ class RestaurantRepositoryTest {
         assertThat(restaurantRepository.findById(restaurantId)).isEmpty();
     }
 
-    private Restaurant createTestRestaurant(String name, String submittedBy) {
+    private Restaurant createTestRestaurant(String name) {
         Restaurant restaurant = new Restaurant();
         restaurant.setName(name);
         restaurant.setSession(testSession);
-        restaurant.setSubmittedBy(submittedBy);
         return entityManager.persistAndFlush(restaurant);
     }
 }

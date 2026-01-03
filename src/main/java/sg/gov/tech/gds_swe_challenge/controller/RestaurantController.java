@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
 import sg.gov.tech.gds_swe_challenge.dto.SubmitRestaurantRequest;
 import sg.gov.tech.gds_swe_challenge.entity.Restaurant;
 import sg.gov.tech.gds_swe_challenge.service.RestaurantService;
@@ -32,7 +34,7 @@ public class RestaurantController {
     }
 
     /**
-     * Submits a restaurant choice for lunch voting.
+     * Submits a restaurant choice for lunch voting. Defaults to global session if session name is not provided in request
      * <p>
      * Requires valid {@link SubmitRestaurantRequest} and {@code X-Username} header.
      * Delegates to {@link RestaurantService#addRestaurant} and returns created restaurant.
@@ -45,26 +47,27 @@ public class RestaurantController {
     @PostMapping("/submit")
     public ResponseEntity<Restaurant> submitRestaurant(
             @Valid @RequestBody SubmitRestaurantRequest request,
-            @RequestHeader("X-Username") String username) {
+            @RequestHeader(AppConstants.HEADER_X_USERNAME) String username) {
         LOGGER.info("submitRestaurant [request: {}, username: {}]", request, username);
-        if (username.trim().isEmpty()) {
-            throw new IllegalArgumentException("X-Username header cannot be empty");
-        }
-        Restaurant restaurant = service.addRestaurant(request.name(), username);
+        Restaurant restaurant = service.addRestaurant(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(restaurant);
     }
 
     /**
-     * Retrieves a **random restaurant** from the database.
+     * Retrieves a **random restaurant** from the database based on the selected session.
      *
-     * @return {@link ResponseEntity} containing:
+     * @param sessionId session id (defaults to GLOBAL_SESSION_ID if not provided)
+     * @param username  X-Username header
+     * @return {@link ResponseEntity}
      */
     @GetMapping("/random")
-    public ResponseEntity<Restaurant> getRandomRestaurant() {
-        LOGGER.info("getRandomRestaurant");
-        Restaurant restaurant = service.getRandomRestaurant();
+    public ResponseEntity<Restaurant> getRandomRestaurant(
+            @RequestParam(value = "sessionId", defaultValue = AppConstants.GLOBAL_SESSION_ID_STR) String sessionId,
+            @RequestHeader(AppConstants.HEADER_X_USERNAME) String username) {
+        LOGGER.info("getRandomRestaurant [sessionId: {}, username: {}]", sessionId, username);
+        Restaurant restaurant = service.getRandomRestaurant(Long.parseLong(sessionId));
         return restaurant != null
                 ? ResponseEntity.ok(restaurant)
                 : ResponseEntity.notFound().build();

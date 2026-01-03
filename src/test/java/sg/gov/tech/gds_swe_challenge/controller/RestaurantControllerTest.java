@@ -7,6 +7,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.client.RestTestClient;
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
 import sg.gov.tech.gds_swe_challenge.dto.SubmitRestaurantRequest;
 import sg.gov.tech.gds_swe_challenge.entity.Restaurant;
 import sg.gov.tech.gds_swe_challenge.service.RestaurantService;
@@ -34,8 +35,8 @@ class RestaurantControllerTest {
         Restaurant savedRestaurant = new Restaurant();
         savedRestaurant.setId(1L);
         savedRestaurant.setName("Kopitiam");
-        savedRestaurant.setSubmittedBy("Test User");
-        when(restaurantService.addRestaurant("Kopitiam", "Test User"))
+        savedRestaurant.setCreatedBy("Test User");
+        when(restaurantService.addRestaurant(request))
                 .thenReturn(savedRestaurant);
 
         client.post().uri("/restaurant/submit")
@@ -48,16 +49,15 @@ class RestaurantControllerTest {
                     assertThat(restaurant).isNotNull();
                     assertThat(restaurant.getId()).isOne();
                     assertThat(restaurant.getName()).isEqualTo("Kopitiam");
-                    assertThat(restaurant.getSubmittedBy()).isEqualTo("Test User");
+                    assertThat(restaurant.getCreatedBy()).isEqualTo("Test User");
                 });
     }
 
     @Test
-    void badRequestWithEmptyUsername() {
+    void badRequestWithMissingUsername() {
         SubmitRestaurantRequest request = new SubmitRestaurantRequest("Pizza Hut");
 
         client.post().uri("/restaurant/submit")
-                .header("X-Username", "")
                 .body(request)
                 .exchange()
                 .expectStatus().is4xxClientError();
@@ -66,7 +66,7 @@ class RestaurantControllerTest {
     @Test
     void handleUnexpectedServiceException() {
         SubmitRestaurantRequest request = new SubmitRestaurantRequest("KFC");
-        when(restaurantService.addRestaurant("KFC", "Test User"))
+        when(restaurantService.addRestaurant(request))
                 .thenThrow(new RuntimeException("Unexpected service error"));
 
         client.post().uri("/restaurant/submit")
@@ -81,10 +81,11 @@ class RestaurantControllerTest {
         Restaurant savedRestaurant = new Restaurant();
         savedRestaurant.setId(1L);
         savedRestaurant.setName("Pizza Hut");
-        when(restaurantService.getRandomRestaurant()).thenReturn(savedRestaurant);
+        when(restaurantService.getRandomRestaurant(AppConstants.GLOBAL_SESSION_ID)).thenReturn(savedRestaurant);
 
         client.get()
                 .uri("/restaurant/random")
+                .header("X-Username", "Test User")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(Restaurant.class)
@@ -97,10 +98,11 @@ class RestaurantControllerTest {
 
     @Test
     void getRandomRestaurant_NoRestaurants() {
-        when(restaurantService.getRandomRestaurant()).thenReturn(null);
+        when(restaurantService.getRandomRestaurant(AppConstants.GLOBAL_SESSION_ID)).thenReturn(null);
 
         client.get()
                 .uri("/restaurant/random")
+                .header("X-Username", "Test User")
                 .exchange()
                 .expectStatus().isNotFound();
     }

@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: insert-global-session
+      author: chinpui
+      changes:
+        - insert:
+            tableName: session
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 0
+              - column:
+                  name: name
+                  value: GLOBAL
+              - column:
+                  name: is_closed
+                  valueBoolean: false
+              - column:
+                  name: created_by
+                  value: SYSTEM
+              - column:
+                  name: created_at
+                  valueComputed: CURRENT_TIMESTAMP

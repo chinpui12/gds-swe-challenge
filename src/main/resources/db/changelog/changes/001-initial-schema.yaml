@@ -58,9 +58,14 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: locked
+                  name: is_closed
                   type: boolean
                   defaultValueBoolean: false
+              - column:
+                  name: selected_restaurant
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
               - column:
                   name: created_at
                   type: timestamp
@@ -101,11 +106,6 @@ databaseChangeLog:
               - column:
                   name: session_id
                   type: bigint
-                  constraints:
-                    nullable: false
-              - column:
-                  name: submitted_by
-                  type: varchar(50)
                   constraints:
                     nullable: false
               - column:

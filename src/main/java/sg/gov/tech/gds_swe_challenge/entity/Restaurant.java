@@ -1,7 +1,9 @@
 package sg.gov.tech.gds_swe_challenge.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -19,11 +21,10 @@ public class Restaurant extends Auditable {
     @Column(nullable = false)
     private String name;
 
-    @ManyToOne
-    @JoinColumn(name = "session_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "session_id", nullable = false)
+    @JsonBackReference
     private Session session;
-
-    private String submittedBy;
 
     public Long getId() {
         return id;
@@ -47,13 +48,5 @@ public class Restaurant extends Auditable {
 
     public void setSession(Session session) {
         this.session = session;
-    }
-
-    public String getSubmittedBy() {
-        return submittedBy;
-    }
-
-    public void setSubmittedBy(String submittedBy) {
-        this.submittedBy = submittedBy;
     }
 }

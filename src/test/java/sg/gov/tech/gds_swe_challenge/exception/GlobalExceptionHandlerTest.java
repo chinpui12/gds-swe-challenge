@@ -14,6 +14,7 @@ import sg.gov.tech.gds_swe_challenge.dto.SubmitRestaurantRequest;
 import sg.gov.tech.gds_swe_challenge.service.RestaurantService;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 
@@ -59,7 +60,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleBusinessLogicExceptions_IllegalArgument() {
-        doThrow(new IllegalArgumentException("Duplicate restaurant name")).when(restaurantService).addRestaurant(anyString(), anyString());
+        doThrow(new IllegalArgumentException("Duplicate restaurant name")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class));
 
         client.post()
                 .uri("/restaurant/submit")
@@ -82,8 +83,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleBusinessLogicExceptions_IllegalState() {
         // Given: Service throws IllegalStateException
-        doThrow(new IllegalStateException("Restaurant submission closed"))
-                .when(restaurantService).addRestaurant(anyString(), anyString());
+        doThrow(new IllegalStateException("Restaurant submission closed")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class));
 
         // When + Then
         client.post()
@@ -119,8 +119,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleGenericException_InternalServerError() {
-        doThrow(new RuntimeException("Database connection failed"))
-                .when(restaurantService).addRestaurant(anyString(), anyString());
+        doThrow(new RuntimeException("Database connection failed")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class));
 
         client.post()
                 .uri("/restaurant/submit")

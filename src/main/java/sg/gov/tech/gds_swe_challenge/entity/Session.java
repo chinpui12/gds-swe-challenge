@@ -1,5 +1,6 @@
 package sg.gov.tech.gds_swe_challenge.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,9 +23,12 @@ public class Session extends Auditable {
     @Column(nullable = false)
     private String name;
 
-    private boolean locked = false;
+    private boolean isClosed = false;
+
+    private String selectedRestaurant;
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<Restaurant> restaurants = new ArrayList<>();
 
     public Long getId() {
@@ -43,12 +47,20 @@ public class Session extends Auditable {
         this.name = name;
     }
 
-    public boolean isLocked() {
-        return locked;
+    public boolean isClosed() {
+        return isClosed;
     }
 
-    public void setLocked(boolean locked) {
-        this.locked = locked;
+    public void setClosed(boolean closed) {
+        isClosed = closed;
+    }
+
+    public String getSelectedRestaurant() {
+        return selectedRestaurant;
+    }
+
+    public void setSelectedRestaurant(String selectedRestaurant) {
+        this.selectedRestaurant = selectedRestaurant;
     }
 
     public List<Restaurant> getRestaurants() {
