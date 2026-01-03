@@ -81,7 +81,7 @@ class RestaurantControllerTest {
         Restaurant savedRestaurant = new Restaurant();
         savedRestaurant.setId(1L);
         savedRestaurant.setName("Pizza Hut");
-        when(restaurantService.getRandomRestaurant(AppConstants.GLOBAL_SESSION_ID)).thenReturn(savedRestaurant);
+        when(restaurantService.getRandomRestaurant(AppConstants.GLOBAL_SESSION_ID, "Test User")).thenReturn(savedRestaurant);
 
         client.get()
                 .uri("/restaurant/random")
@@ -98,7 +98,7 @@ class RestaurantControllerTest {
 
     @Test
     void getRandomRestaurant_NoRestaurants() {
-        when(restaurantService.getRandomRestaurant(AppConstants.GLOBAL_SESSION_ID)).thenReturn(null);
+        when(restaurantService.getRandomRestaurant(AppConstants.GLOBAL_SESSION_ID, "Test User")).thenReturn(null);
 
         client.get()
                 .uri("/restaurant/random")

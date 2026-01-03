@@ -81,13 +81,16 @@ class RestaurantServiceTest {
 
     @Test
     void getRandomRestaurant_ShouldReturnRestaurant() {
+        long sessionId = 1L;
         Restaurant restaurant = new Restaurant();
         restaurant.setId(1L);
         restaurant.setName("Kopitiam");
-
         when(repository.findRandomRestaurantBySession(1L)).thenReturn(Optional.of(restaurant));
+        var session = new Session();
+        session.setCreatedBy("Test User");
+        when(sessionService.getOpenSession(sessionId)).thenReturn(session);
 
-        Restaurant result = sut.getRandomRestaurant(1L);
+        Restaurant result = sut.getRandomRestaurant(sessionId, "Test User");
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("Kopitiam");
@@ -98,14 +101,31 @@ class RestaurantServiceTest {
     void getRandomRestaurant_NoRestaurants_ShouldReturnNull() {
         long sessionId = 1L;
         when(repository.findRandomRestaurantBySession(sessionId)).thenReturn(Optional.empty());
+        var session = new Session();
+        session.setCreatedBy("Test User");
+        when(sessionService.getOpenSession(sessionId)).thenReturn(session);
 
-        assertThatThrownBy(() -> sut.getRandomRestaurant(sessionId))
+        assertThatThrownBy(() -> sut.getRandomRestaurant(sessionId, "Test User"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("No restaurants available in session: 1");
 
-
         verify(sessionService).isSessionClosed(sessionId);
         verify(repository).findRandomRestaurantBySession(sessionId);
+        verify(sessionService, never()).closeSession(anyLong(), anyString());
+    }
+
+    @Test
+    void getRandomRestaurant_NotInitiator_ThrowException() {
+        long sessionId = 1L;
+        var session = new Session();
+        session.setCreatedBy("Some other user");
+        when(sessionService.getOpenSession(sessionId)).thenReturn(session);
+
+        assertThatThrownBy(() -> sut.getRandomRestaurant(sessionId, "Test User"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Only the user who submitted the first restaurant may make the request: [initiator: Some other user]");
+
+        verify(sessionService).isSessionClosed(sessionId);
         verify(sessionService, never()).closeSession(anyLong(), anyString());
     }
 }

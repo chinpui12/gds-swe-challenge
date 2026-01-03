@@ -83,7 +83,7 @@ public class RestaurantController {
             @RequestParam(value = "sessionId", defaultValue = AppConstants.GLOBAL_SESSION_ID_STR) String sessionId,
             @RequestHeader(AppConstants.HEADER_X_USERNAME) String username) {
         LOGGER.info("getRandomRestaurant [sessionId: {}, username: {}]", sessionId, username);
-        Restaurant restaurant = service.getRandomRestaurant(Long.parseLong(sessionId));
+        Restaurant restaurant = service.getRandomRestaurant(Long.parseLong(sessionId), username);
         return restaurant != null
                 ? ResponseEntity.ok(restaurant)
                 : ResponseEntity.notFound().build();

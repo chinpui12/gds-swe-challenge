@@ -30,9 +30,15 @@ public class RestaurantService {
     }
 
     @Transactional(readOnly = true)
-    public Restaurant getRandomRestaurant(long sessionId) {
+    public Restaurant getRandomRestaurant(long sessionId, String username) {
         if (sessionService.isSessionClosed(sessionId)) {
             throw new IllegalStateException("Session is already closed, a random restaurant has already been selected");
+        }
+        var session = sessionService.getOpenSession(sessionId);
+        if (!session.getCreatedBy().equals(username)) {
+            throw new IllegalStateException(
+                    "Only the user who submitted the first restaurant may make the request: [initiator: %s]".formatted(
+                            session.getCreatedBy()));
         }
         var randomRestaurant = restaurantRepository.findRandomRestaurantBySession(sessionId)
                 .orElseThrow(() -> new IllegalStateException(
