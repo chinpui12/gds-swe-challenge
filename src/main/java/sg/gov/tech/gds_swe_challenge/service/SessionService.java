@@ -5,9 +5,10 @@ import org.springframework.transaction.annotation.Transactional;
 import sg.gov.tech.gds_swe_challenge.entity.Session;
 import sg.gov.tech.gds_swe_challenge.repository.SessionRepository;
 
+import java.util.List;
+
 @Service
 public class SessionService {
-
     private final SessionRepository sessionRepository;
 
     public SessionService(SessionRepository sessionRepository) {
@@ -31,7 +32,7 @@ public class SessionService {
                 .orElseGet(() -> {
                     Session newSession = new Session();
                     newSession.setName(sessionName);
-                    return sessionRepository.save(newSession);
+                    return sessionRepository.saveAndFlush(newSession);
                 });
     }
 
@@ -46,7 +47,22 @@ public class SessionService {
         }
         session.setClosed(true);
         session.setSelectedRestaurant(selectedRestaurant);
-        sessionRepository.save(session);
+        sessionRepository.saveAndFlush(session);
+    }
+
+    @Transactional
+    public Session resetSession(Long sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Session not found with id: " + sessionId));
+
+        if (!session.isClosed()) {
+            throw new IllegalStateException(
+                    "Session with id " + sessionId + " is already open");
+        }
+        session.reset();
+
+        return sessionRepository.saveAndFlush(session);
     }
 
     /**
@@ -55,6 +71,14 @@ public class SessionService {
     @Transactional(readOnly = true)
     public Session getOpenSession(long id) {
         return sessionRepository.findByIdAndIsClosedFalse(id).orElse(null);
+    }
+
+    /**
+     * Get all sessions
+     */
+    @Transactional(readOnly = true)
+    public List<Session> getSessions() {
+        return sessionRepository.findAll();
     }
 
     /**

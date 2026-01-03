@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import sg.gov.tech.gds_swe_challenge.entity.Session;
 import sg.gov.tech.gds_swe_challenge.repository.SessionRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +45,7 @@ class SessionServiceTest {
 
         assertThat(result).isEqualTo(existingSession);
         verify(sessionRepository).findById(sessionId);
-        verify(sessionRepository, never()).save(any(Session.class));
+        verify(sessionRepository, never()).saveAndFlush(any(Session.class));
     }
 
     @Test
@@ -60,7 +61,7 @@ class SessionServiceTest {
                 .hasMessage("Session is already closed for restaurant submissions");
 
         verify(sessionRepository).findById(sessionId);
-        verify(sessionRepository, never()).save(any());
+        verify(sessionRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -73,7 +74,7 @@ class SessionServiceTest {
         savedSession.setId(sessionId);
         savedSession.setName(sessionName);
         savedSession.setClosed(false);
-        when(sessionRepository.save(any(Session.class))).thenReturn(savedSession);
+        when(sessionRepository.saveAndFlush(any(Session.class))).thenReturn(savedSession);
 
         Session result = sut.getOrCreateSession(sessionId, sessionName);
 
@@ -81,7 +82,7 @@ class SessionServiceTest {
         verify(sessionRepository).findById(sessionId);
 
         ArgumentCaptor<Session> captor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionRepository).save(captor.capture());
+        verify(sessionRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getName()).isEqualTo("new-team");
     }
 
@@ -99,7 +100,7 @@ class SessionServiceTest {
         assertThat(openSession.isClosed()).isTrue();
         assertThat(openSession.getSelectedRestaurant()).isEqualTo("Kopitiam");
         verify(sessionRepository).findByIdAndIsClosedFalse(sessionId);
-        verify(sessionRepository).save(openSession);
+        verify(sessionRepository).saveAndFlush(openSession);
     }
 
     @Test
@@ -112,7 +113,7 @@ class SessionServiceTest {
                 .hasMessage("Unable to find open session with id: 5");
 
         verify(sessionRepository).findByIdAndIsClosedFalse(sessionId);
-        verify(sessionRepository, never()).save(any());
+        verify(sessionRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -191,4 +192,111 @@ class SessionServiceTest {
 
         assertThat(result).isFalse();
     }
+
+    @Test
+    void resetSession_closedSession_resetsAndSaves() {
+        long sessionId = 12L;
+        Session closedSession = new Session();
+        closedSession.setId(sessionId);
+        closedSession.setName("team-omega");
+        closedSession.setClosed(true);
+        closedSession.setSelectedRestaurant("Kopitiam");
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(closedSession));
+
+        Session savedSession = new Session();
+        savedSession.setId(sessionId);
+        savedSession.setClosed(false);
+        savedSession.setSelectedRestaurant(null);
+        when(sessionRepository.saveAndFlush(any(Session.class))).thenReturn(savedSession);
+
+        Session result = sut.resetSession(sessionId);
+
+        assertThat(result.getId()).isEqualTo(sessionId);
+        assertThat(result.isClosed()).isFalse();
+        assertThat(result.getSelectedRestaurant()).isNull();
+
+        verify(sessionRepository).findById(sessionId);
+        verify(sessionRepository).saveAndFlush(closedSession);
+
+        ArgumentCaptor<Session> captor = ArgumentCaptor.forClass(Session.class);
+        verify(sessionRepository).saveAndFlush(captor.capture());
+        Session captured = captor.getValue();
+        assertThat(captured.isClosed()).isFalse();
+        assertThat(captured.getSelectedRestaurant()).isNull();
+    }
+
+    @Test
+    void resetSession_alreadyOpen_throwsIllegalStateException() {
+        long sessionId = 13L;
+        Session openSession = new Session();
+        openSession.setId(sessionId);
+        openSession.setClosed(false);
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(openSession));
+
+        assertThatThrownBy(() -> sut.resetSession(sessionId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Session with id 13 is already open");
+
+        verify(sessionRepository).findById(sessionId);
+        verify(sessionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void resetSession_notFound_throwsIllegalStateException() {
+        long sessionId = 14L;
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> sut.resetSession(sessionId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Session not found with id: 14");
+
+        verify(sessionRepository).findById(sessionId);
+        verify(sessionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void getSessions_returnsAllSessions() {
+        List<Session> expectedSessions = List.of(
+                createSession(15L, "GLOBAL", false, null),
+                createSession(16L, "team-epsilon", true, "Food Republic")
+        );
+        when(sessionRepository.findAll()).thenReturn(expectedSessions);
+
+        List<Session> result = sut.getSessions();
+
+        assertThat(result).isEqualTo(expectedSessions);
+        verify(sessionRepository).findAll();
+    }
+
+    @Test
+    void getSessions_emptyList_returnsEmptyList() {
+        when(sessionRepository.findAll()).thenReturn(List.of());
+
+        List<Session> result = sut.getSessions();
+
+        assertThat(result).isEmpty();
+        verify(sessionRepository).findAll();
+    }
+
+    @Test
+    void getSessions_repositoryThrowsException_propagatesException() {
+        when(sessionRepository.findAll())
+                .thenThrow(new RuntimeException("Database error"));
+
+        assertThatThrownBy(() -> sut.getSessions())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Database error");
+
+        verify(sessionRepository).findAll();
+    }
+
+    private Session createSession(Long id, String name, boolean closed, String selectedRestaurant) {
+        Session session = new Session();
+        session.setId(id);
+        session.setName(name);
+        session.setClosed(closed);
+        session.setSelectedRestaurant(selectedRestaurant);
+        return session;
+    }
+
 }

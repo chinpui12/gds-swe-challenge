@@ -70,4 +70,9 @@ public class Session extends Auditable {
     public void setRestaurants(List<Restaurant> restaurants) {
         this.restaurants = restaurants;
     }
+
+    public void reset() {
+        this.isClosed = false;
+        this.selectedRestaurant = null;
+    }
 }
