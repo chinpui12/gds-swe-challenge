@@ -43,7 +43,6 @@ class RestaurantServiceTest {
     void addRestaurant_ShouldCreateAndSaveRestaurant() {
         String sessionName = AppConstants.GLOBAL_SESSION_NAME;
         SubmitRestaurantRequest request = new SubmitRestaurantRequest("Kopitiam");
-        String createdBy = "Test User";
 
         Session savedSession = new Session();
         savedSession.setName(sessionName);
@@ -51,7 +50,7 @@ class RestaurantServiceTest {
         when(sessionService.getOrCreateSession(AppConstants.GLOBAL_SESSION_ID, sessionName))
                 .thenReturn(savedSession);
 
-        sut.addRestaurant(request);
+        sut.addRestaurant(request, "alice");
 
         ArgumentCaptor<Restaurant> restaurantCaptor = ArgumentCaptor.forClass(Restaurant.class);
         verify(repository).saveAndFlush(restaurantCaptor.capture());
@@ -73,7 +72,7 @@ class RestaurantServiceTest {
                 .thenThrow(new RuntimeException("Database error"));
         when(sessionService.getOrCreateSession(anyLong(), anyString())).thenReturn(null);
 
-        assertThatThrownBy(() -> sut.addRestaurant(new SubmitRestaurantRequest(name)))
+        assertThatThrownBy(() -> sut.addRestaurant(new SubmitRestaurantRequest(name), "alice"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Database error");
 
@@ -108,6 +107,5 @@ class RestaurantServiceTest {
         verify(sessionService).isSessionClosed(sessionId);
         verify(repository).findRandomRestaurantBySession(sessionId);
         verify(sessionService, never()).closeSession(anyLong(), anyString());
-
     }
 }

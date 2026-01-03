@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +16,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import sg.gov.tech.gds_swe_challenge.dto.InviteUserRequest;
 import sg.gov.tech.gds_swe_challenge.entity.Session;
 import sg.gov.tech.gds_swe_challenge.service.SessionService;
 
@@ -79,5 +84,24 @@ public class SessionController {
         LOGGER.info("Resetting session [id: {}]", sessionId);
         Session resetSession = service.resetSession(sessionId);
         return ResponseEntity.ok(resetSession);
+    }
+
+    /**
+     * ✅ Invite user to session (CREATOR ONLY)
+     */
+    @PostMapping("/invite")
+    @Operation(summary = "Invite user to session",
+            description = "Only session creator can invite. Session must be OPEN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Users invited successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid inviter/closed session"),
+            @ApiResponse(responseCode = "403", description = "Not session creator"),
+            @ApiResponse(responseCode = "404", description = "Session/User not found")
+    })
+    public ResponseEntity<Session> inviteUser(
+            @RequestHeader("X-Username") String inviterUsername,
+            @Valid @RequestBody InviteUserRequest request) {
+        var session = service.inviteUser(request.sessionId(), inviterUsername, request.usernames());
+        return ResponseEntity.ok(session);
     }
 }

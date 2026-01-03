@@ -6,7 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
 import sg.gov.tech.gds_swe_challenge.entity.Session;
+import sg.gov.tech.gds_swe_challenge.entity.User;
 import sg.gov.tech.gds_swe_challenge.repository.SessionRepository;
 
 import java.util.List;
@@ -23,12 +25,14 @@ import static org.mockito.Mockito.when;
 class SessionServiceTest {
     @Mock
     private SessionRepository sessionRepository;
+    @Mock
+    private UserService userService;
 
     private SessionService sut;
 
     @BeforeEach
     void setup() {
-        sut = new SessionService(sessionRepository);
+        sut = new SessionService(sessionRepository, userService);
     }
 
     @Test
@@ -290,6 +294,150 @@ class SessionServiceTest {
         verify(sessionRepository).findAll();
     }
 
+
+    @Test
+    void inviteUser_batchInvite_validCreator_returnsUpdatedSession() {
+        long sessionId = 50L;
+        Session session = createSession(sessionId, "team-batch", false, null);
+        session.setCreatedBy("alice");
+        User creator = createUser("alice");
+        List<User> invitees = List.of(
+                createUser("bob"),
+                createUser("charlie")
+        );
+
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(userService.getUser("alice")).thenReturn(creator);
+        when(userService.getUser("bob")).thenReturn(invitees.get(0));
+        when(userService.getUser("charlie")).thenReturn(invitees.get(1));
+        Session savedSession = new Session();
+        savedSession.setId(sessionId);
+        when(sessionRepository.saveAndFlush(session)).thenReturn(savedSession);
+
+        Session result = sut.inviteUser(sessionId, "alice", List.of("bob", "charlie"));
+
+        assertThat(result.getId()).isEqualTo(sessionId);
+        assertThat(session.getInvitedUsers()).hasSize(2);
+        assertThat(session.getInvitedUsers())
+                .extracting(User::getUsername)
+                .containsExactlyInAnyOrder("bob", "charlie");
+
+        verify(sessionRepository).findById(sessionId);
+        verify(sessionRepository).saveAndFlush(session);
+        verify(userService).getUser("alice");
+        verify(userService).getUser("bob");
+        verify(userService).getUser("charlie");
+    }
+
+    @Test
+    void inviteUser_nonCreator_throwsIllegalStateException() {
+        long sessionId = 51L;
+        Session session = createSession(sessionId, "team-51", false, null);
+        session.setCreatedBy("alice");
+        User nonCreator = createUser("non-creator");
+
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(userService.getUser("non-creator")).thenReturn(nonCreator);
+
+        assertThatThrownBy(() -> sut.inviteUser(sessionId, "non-creator", List.of("bob")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Only session creator can invite users");
+
+        verify(sessionRepository).findById(sessionId);
+        verify(userService).getUser("non-creator");
+        verify(sessionRepository, never()).saveAndFlush(any());
+        verify(userService, never()).getUser("bob");
+    }
+
+    @Test
+    void inviteUser_closedSession_throwsIllegalStateException() {
+        long sessionId = 52L;
+        Session closedSession = createSession(sessionId, "closed-team", true, "KFC");
+        closedSession.setCreatedBy("alice");
+
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(closedSession));
+        when(userService.getUser("alice")).thenReturn(createUser("alice"));
+
+        assertThatThrownBy(() -> sut.inviteUser(sessionId, "alice", List.of("bob")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot invite to closed session");
+
+        verify(sessionRepository).findById(sessionId);
+        verify(userService).getUser("alice");
+        verify(sessionRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void inviteUser_emptyList_noUsersAdded() {
+        long sessionId = 53L;
+        Session session = createSession(sessionId, "empty-invite", false, null);
+        session.setCreatedBy("dave");
+        User creator = createUser("dave");
+
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(userService.getUser("dave")).thenReturn(creator);
+        when(sessionRepository.saveAndFlush(session)).thenReturn(session);
+
+        sut.inviteUser(sessionId, "dave", List.of());
+
+        assertThat(session.getInvitedUsers()).isEmpty();
+        verify(sessionRepository).saveAndFlush(session);
+    }
+
+    @Test
+    void inviteUser_duplicateUsernames_noDuplicatesAdded() {
+        long sessionId = 54L;
+        Session session = createSession(sessionId, "dupe-test", false, null);
+        session.setCreatedBy("alice");
+        User bob = createUser("bob");
+
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(session));
+        when(userService.getUser("alice")).thenReturn(createUser("alice"));
+        when(userService.getUser("bob")).thenReturn(bob);
+        when(sessionRepository.saveAndFlush(session)).thenReturn(session);
+
+        sut.inviteUser(sessionId, "alice", List.of("bob", "bob"));
+
+        verify(userService).getUser("bob");
+    }
+
+    @Test
+    void validateUserCanSubmit_globalSession_alwaysAllowed() {
+        long globalSessionId = AppConstants.GLOBAL_SESSION_ID;  // e.g., 0L
+        Session globalSession = createSession(globalSessionId, "GLOBAL", true, null);  // Closed!
+
+        sut.validateUserCanSubmit(globalSession, "anyone");
+    }
+
+    @Test
+    void validateUserCanSubmit_openSession_invitedUser_passes() {
+        long sessionId = 70L;
+        Session openSession = createSession(sessionId, "team-open", false, null);
+        openSession.getInvitedUsers().add(createUser("alice"));
+
+        sut.validateUserCanSubmit(openSession, "alice");
+    }
+
+    @Test
+    void validateUserCanSubmit_openSession_notInvited_throwsException() {
+        long sessionId = 71L;
+        Session openSession = createSession(sessionId, "team-71", false, null);
+
+        assertThatThrownBy(() -> sut.validateUserCanSubmit(openSession, "alice"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot validate submission for session 71: User 'alice' not invited to session 'team-71' (ID: 71)");
+    }
+
+    @Test
+    void validateUserCanSubmit_closedSession_nonGlobal_throwsException() {
+        long sessionId = 72L;
+        Session closedSession = createSession(sessionId, "closed-team", true, "KFC");
+
+        assertThatThrownBy(() -> sut.validateUserCanSubmit(closedSession, "bob"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot validate submission for session 72: Session 72 is closed for submissions");
+    }
+
     private Session createSession(Long id, String name, boolean closed, String selectedRestaurant) {
         Session session = new Session();
         session.setId(id);
@@ -299,4 +447,9 @@ class SessionServiceTest {
         return session;
     }
 
+    private User createUser(String username) {
+        User user = new User();
+        user.setUsername(username);
+        return user;
+    }
 }

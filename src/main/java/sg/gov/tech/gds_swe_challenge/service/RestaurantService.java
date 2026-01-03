@@ -17,8 +17,10 @@ public class RestaurantService {
         this.sessionService = sessionService;
     }
 
-    public Restaurant addRestaurant(SubmitRestaurantRequest request) {
+    public Restaurant addRestaurant(SubmitRestaurantRequest request, String username) {
         var session = sessionService.getOrCreateSession(request.sessionId(), request.sessionName());
+        System.out.println(session.getInvitedUsers());
+        sessionService.validateUserCanSubmit(session, username);
 
         Restaurant restaurant = new Restaurant();
         restaurant.setName(request.name());

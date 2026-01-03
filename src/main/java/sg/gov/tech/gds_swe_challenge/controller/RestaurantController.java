@@ -63,7 +63,7 @@ public class RestaurantController {
             @Valid @RequestBody SubmitRestaurantRequest request,
             @RequestHeader(AppConstants.HEADER_X_USERNAME) String username) {
         LOGGER.info("submitRestaurant [request: {}, username: {}]", request, username);
-        Restaurant restaurant = service.addRestaurant(request);
+        Restaurant restaurant = service.addRestaurant(request, username);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(restaurant);

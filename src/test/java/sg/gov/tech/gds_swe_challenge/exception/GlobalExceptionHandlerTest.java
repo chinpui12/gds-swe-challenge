@@ -60,7 +60,8 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleBusinessLogicExceptions_IllegalArgument() {
-        doThrow(new IllegalArgumentException("Duplicate restaurant name")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class));
+        doThrow(new IllegalArgumentException("Duplicate restaurant name")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class)
+                , anyString());
 
         client.post()
                 .uri("/restaurant/submit")
@@ -82,10 +83,9 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleBusinessLogicExceptions_IllegalState() {
-        // Given: Service throws IllegalStateException
-        doThrow(new IllegalStateException("Restaurant submission closed")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class));
+        doThrow(new IllegalStateException("Restaurant submission closed")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class)
+                , anyString());
 
-        // When + Then
         client.post()
                 .uri("/restaurant/submit")
                 .header("X-Username", "Test User")
@@ -119,7 +119,8 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleGenericException_InternalServerError() {
-        doThrow(new RuntimeException("Database connection failed")).when(restaurantService).addRestaurant(any(SubmitRestaurantRequest.class));
+        doThrow(new RuntimeException("Database connection failed")).when(restaurantService)
+                .addRestaurant(any(SubmitRestaurantRequest.class), anyString());
 
         client.post()
                 .uri("/restaurant/submit")

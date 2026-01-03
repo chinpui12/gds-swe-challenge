@@ -4,18 +4,13 @@ databaseChangeLog:
       author: chinpui
       changes:
         - createTable:
-            tableName: user
+            tableName: app_user
             columns:
               - column:
                   name: username
                   type: varchar(50)
                   constraints:
                     primaryKey: true
-                    nullable: false
-              - column:
-                  name: name
-                  type: varchar(100)
-                  constraints:
                     nullable: false
               - column:
                   name: can_initiate_session
@@ -84,7 +79,12 @@ databaseChangeLog:
               - column:
                   name: updated_by
                   type: varchar(50)
-
+              - addForeignKeyConstraint:
+                  baseTableName: session
+                  baseColumnNames: created_by
+                  referencedTableName: app_user
+                  referencedColumnNames: username
+                  constraintName: fk_session_creator
   - changeSet:
       id: create-restaurant-table
       author: chinpui
@@ -132,3 +132,35 @@ databaseChangeLog:
             referencedTableName: session
             referencedColumnNames: id
             constraintName: fk_restaurant_session
+  - changeSet:
+      id: create-session-invited-users-junction
+      author: chinpui
+      changes:
+        - createTable:
+            tableName: session_invited_users
+            columns:
+              - column:
+                  name: session_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_username
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: session_invited_users
+            columnNames: session_id,user_username
+        - addForeignKeyConstraint:
+            baseTableName: session_invited_users
+            baseColumnNames: session_id
+            referencedTableName: session
+            referencedColumnNames: id
+            constraintName: fk_session_invited_users_session
+        - addForeignKeyConstraint:
+            baseTableName: session_invited_users
+            baseColumnNames: user_username
+            referencedTableName: app_user
+            referencedColumnNames: username
+            constraintName: fk_session_invited_users_user

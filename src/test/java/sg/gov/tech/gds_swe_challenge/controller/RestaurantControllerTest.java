@@ -36,7 +36,7 @@ class RestaurantControllerTest {
         savedRestaurant.setId(1L);
         savedRestaurant.setName("Kopitiam");
         savedRestaurant.setCreatedBy("Test User");
-        when(restaurantService.addRestaurant(request))
+        when(restaurantService.addRestaurant(request, "Test User"))
                 .thenReturn(savedRestaurant);
 
         client.post().uri("/restaurant/submit")
@@ -66,7 +66,7 @@ class RestaurantControllerTest {
     @Test
     void handleUnexpectedServiceException() {
         SubmitRestaurantRequest request = new SubmitRestaurantRequest("KFC");
-        when(restaurantService.addRestaurant(request))
+        when(restaurantService.addRestaurant(request, "Test User"))
                 .thenThrow(new RuntimeException("Unexpected service error"));
 
         client.post().uri("/restaurant/submit")

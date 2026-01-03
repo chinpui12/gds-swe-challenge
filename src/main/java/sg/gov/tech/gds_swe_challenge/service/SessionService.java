@@ -2,7 +2,9 @@ package sg.gov.tech.gds_swe_challenge.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sg.gov.tech.gds_swe_challenge.constant.AppConstants;
 import sg.gov.tech.gds_swe_challenge.entity.Session;
+import sg.gov.tech.gds_swe_challenge.entity.User;
 import sg.gov.tech.gds_swe_challenge.repository.SessionRepository;
 
 import java.util.List;
@@ -10,9 +12,12 @@ import java.util.List;
 @Service
 public class SessionService {
     private final SessionRepository sessionRepository;
+    private final UserService userService;
 
-    public SessionService(SessionRepository sessionRepository) {
+    public SessionService(SessionRepository sessionRepository,
+                          UserService userService) {
         this.sessionRepository = sessionRepository;
+        this.userService = userService;
     }
 
     /**
@@ -87,5 +92,63 @@ public class SessionService {
     public boolean isSessionClosed(long id) {
         Session session = getOpenSession(id);
         return session != null && session.isClosed();
+    }
+
+    /**
+     * Invite user - only by creator
+     */
+    @Transactional
+    public Session inviteUser(Long sessionId, String inviterUsername, List<String> invitedUsernames) {
+        Session session = getSession(sessionId);
+        User inviter = userService.getUser(inviterUsername);
+
+        if (!session.isCreator(inviter)) {
+            throw new IllegalStateException("Only session creator can invite users");
+        }
+
+        if (session.isClosed()) {
+            throw new IllegalStateException("Cannot invite to closed session");
+        }
+
+        invitedUsernames
+                .stream()
+                .distinct()
+                .forEach(invitedUsername -> {
+                    User invitedUser = userService.getUser(invitedUsername);
+                    session.addInvitedUser(invitedUser);
+                });
+
+        return sessionRepository.saveAndFlush(session);
+    }
+
+    private Session getSession(Long sessionId) {
+        return sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalStateException("Session not found: " + sessionId));
+    }
+
+    public void validateUserCanSubmit(Session session, String username) {
+        if (session != null) {
+            var sessionId = session.getId();
+            try {
+                if (sessionId.equals(AppConstants.GLOBAL_SESSION_ID)) {
+                    return;
+                }
+
+                if (session.isClosed()) {
+                    throw new IllegalStateException(
+                            "Session %d is closed for submissions".formatted(sessionId));
+                }
+
+                if (!session.isUserInvited(username)) {
+                    throw new IllegalStateException(
+                            "User '%s' not invited to session '%s' (ID: %d)".formatted(
+                                    username, session.getName(), sessionId));
+                }
+            } catch (Exception e) {
+                throw new IllegalStateException(
+                        "Cannot validate submission for session %d: %s".formatted(
+                                sessionId, e.getMessage()), e);
+            }
+        }
     }
 }
