@@ -26,7 +26,7 @@ public class SessionService {
      * If session is closed for restaurant submissions, throw exception
      */
     @Transactional
-    public Session getOrCreateSession(long sessionId, String sessionName) {
+    public Session getOrCreateSession(long sessionId, String sessionName, String username) {
         return sessionRepository.findById(sessionId)
                 .filter(foundSession -> {
                     if (foundSession.isClosed()) {
@@ -35,9 +35,14 @@ public class SessionService {
                     return true;
                 })
                 .orElseGet(() -> {
-                    Session newSession = new Session();
-                    newSession.setName(sessionName);
-                    return sessionRepository.saveAndFlush(newSession);
+                    User user = userService.getUser(username);
+                    if (user.isCanInitiateSession()) {
+                        Session newSession = new Session();
+                        newSession.setName(sessionName);
+                        return sessionRepository.saveAndFlush(newSession);
+                    } else {
+                        throw new IllegalStateException("User is not allowed to initiate session: %s".formatted(user.getUsername()));
+                    }
                 });
     }
 

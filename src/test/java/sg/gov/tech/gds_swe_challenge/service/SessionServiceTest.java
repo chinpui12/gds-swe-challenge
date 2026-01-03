@@ -28,11 +28,14 @@ class SessionServiceTest {
     @Mock
     private UserService userService;
 
+    private String username;
+
     private SessionService sut;
 
     @BeforeEach
     void setup() {
         sut = new SessionService(sessionRepository, userService);
+        username = "alice";
     }
 
     @Test
@@ -45,7 +48,7 @@ class SessionServiceTest {
         existingSession.setClosed(false);
         when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(existingSession));
 
-        Session result = sut.getOrCreateSession(sessionId, sessionName);
+        Session result = sut.getOrCreateSession(sessionId, sessionName, username);
 
         assertThat(result).isEqualTo(existingSession);
         verify(sessionRepository).findById(sessionId);
@@ -60,7 +63,7 @@ class SessionServiceTest {
         closedSession.setClosed(true);
         when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(closedSession));
 
-        assertThatThrownBy(() -> sut.getOrCreateSession(sessionId, "closed-team"))
+        assertThatThrownBy(() -> sut.getOrCreateSession(sessionId, "closed-team", username))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Session is already closed for restaurant submissions");
 
@@ -79,8 +82,11 @@ class SessionServiceTest {
         savedSession.setName(sessionName);
         savedSession.setClosed(false);
         when(sessionRepository.saveAndFlush(any(Session.class))).thenReturn(savedSession);
+        User userThatCanInitiateSession = createUser("alice");
+        userThatCanInitiateSession.setCanInitiateSession(true);
+        when(userService.getUser(username)).thenReturn(userThatCanInitiateSession);
 
-        Session result = sut.getOrCreateSession(sessionId, sessionName);
+        Session result = sut.getOrCreateSession(sessionId, sessionName, username);
 
         assertThat(result).isEqualTo(savedSession);
         verify(sessionRepository).findById(sessionId);
@@ -88,6 +94,23 @@ class SessionServiceTest {
         ArgumentCaptor<Session> captor = ArgumentCaptor.forClass(Session.class);
         verify(sessionRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getName()).isEqualTo("new-team");
+    }
+
+    @Test
+    void getOrCreateSession_sessionNotFound_createsNewSession_userCannotInitiateSession() {
+        long sessionId = 3L;
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.empty());
+
+        User userThatCannotInitiateSession = createUser("alice");
+        userThatCannotInitiateSession.setCanInitiateSession(false);
+        when(userService.getUser(username)).thenReturn(userThatCannotInitiateSession);
+
+        assertThatThrownBy(() -> sut.getOrCreateSession(sessionId, "new-team", username))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("User is not allowed to initiate session: alice");
+
+        verify(sessionRepository).findById(sessionId);
+        verify(sessionRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -444,6 +467,7 @@ class SessionServiceTest {
         session.setName(name);
         session.setClosed(closed);
         session.setSelectedRestaurant(selectedRestaurant);
+        session.setCreatedBy(name);
         return session;
     }
 

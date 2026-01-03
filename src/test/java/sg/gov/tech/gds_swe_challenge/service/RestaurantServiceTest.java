@@ -47,7 +47,7 @@ class RestaurantServiceTest {
         Session savedSession = new Session();
         savedSession.setName(sessionName);
         savedSession.setId(AppConstants.GLOBAL_SESSION_ID);
-        when(sessionService.getOrCreateSession(AppConstants.GLOBAL_SESSION_ID, sessionName))
+        when(sessionService.getOrCreateSession(AppConstants.GLOBAL_SESSION_ID, sessionName, "alice"))
                 .thenReturn(savedSession);
 
         sut.addRestaurant(request, "alice");
@@ -58,7 +58,7 @@ class RestaurantServiceTest {
         assertThat(savedRestaurant.getName()).isEqualTo("Kopitiam");
         assertThat(savedRestaurant.getSession()).isSameAs(savedSession);
 
-        verify(sessionService).getOrCreateSession(AppConstants.GLOBAL_SESSION_ID, sessionName);
+        verify(sessionService).getOrCreateSession(AppConstants.GLOBAL_SESSION_ID, sessionName, "alice");
         verify(repository).saveAndFlush(argThat(restaurant ->
                 restaurant.getName().equals("Kopitiam") &&
                         restaurant.getSession().equals(savedSession)));
@@ -70,7 +70,7 @@ class RestaurantServiceTest {
         String name = "KFC";
         when(repository.saveAndFlush(any(Restaurant.class)))
                 .thenThrow(new RuntimeException("Database error"));
-        when(sessionService.getOrCreateSession(anyLong(), anyString())).thenReturn(null);
+        when(sessionService.getOrCreateSession(anyLong(), anyString(), anyString())).thenReturn(null);
 
         assertThatThrownBy(() -> sut.addRestaurant(new SubmitRestaurantRequest(name), "alice"))
                 .isInstanceOf(RuntimeException.class)
