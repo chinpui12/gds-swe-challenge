@@ -1,0 +1,73 @@
+databaseChangeLog:
+  - changeSet:
+      id: insert-default-users
+      author: chinpui
+      preConditions:
+        - onFail: WARN
+        - tableExists:
+            tableName: app_user
+      changes:
+        - insert:
+            tableName: app_user
+            columns:
+              - column:
+                  name: username
+                  value: alice
+              - column:
+                  name: can_initiate_session
+                  valueBoolean: false
+              - column:
+                  name: created_by
+                  value: SYSTEM
+              - column:
+                  name: created_at
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: app_user
+            columns:
+              - column:
+                  name: username
+                  value: bob
+              - column:
+                  name: can_initiate_session
+                  valueBoolean: false
+              - column:
+                  name: created_by
+                  value: SYSTEM
+              - column:
+                  name: created_at
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: app_user
+            columns:
+              - column:
+                  name: username
+                  value: charlie
+              - column:
+                  name: can_initiate_session
+                  valueBoolean: false
+              - column:
+                  name: created_by
+                  value: SYSTEM
+              - column:
+                  name: created_at
+                  valueComputed: CURRENT_TIMESTAMP
+        - insert:
+            tableName: app_user
+            columns:
+              - column:
+                  name: username
+                  value: dave
+              - column:
+                  name: can_initiate_session
+                  valueBoolean: false
+              - column:
+                  name: created_by
+                  value: SYSTEM
+              - column:
+                  name: created_at
+                  valueComputed: CURRENT_TIMESTAMP
+      rollback:
+        - delete:
+            tableName: app_user
+            where: username IN ('alice', 'bob', 'charlie', 'dave')
