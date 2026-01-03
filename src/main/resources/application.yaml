@@ -13,6 +13,8 @@ spring:
   h2:
     console:
       enabled: true
+      settings:
+        web-allow-others: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     enabled: true

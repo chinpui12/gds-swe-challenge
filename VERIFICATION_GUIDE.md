@@ -80,59 +80,65 @@ curl -X POST "http://localhost:8080/restaurant/submit" \
 curl -X POST "http://localhost:8080/restaurant/submit" \
   -H "Content-Type: application/json" \
   -H "X-Username: bob" \
-  -d "{\"sessionId\": 100, \"name\": \"Bob's Pizza\"}"
+  -d "{\"sessionId\": 999, \"sessionName\": \"Bob's Pizza\", \"name\": \"Bob's Pizza\"}"
 ```
-**Expected:** `403 Forbidden` (Bob cannot initiate sessions).
+**Expected:** `400 Bad Request` (Bob cannot initiate sessions).
 
 ### 2. Authorized Creation (req 5, 6)
-`alice` (authorized) initiates Session 100 by submitting to it.
+`alice` (authorized) initiates a session. She attempts to submit to a non-existent ID (e.g., 999), which triggers the creation of a **NEW** session.
+
+> [!IMPORTANT]
+> The `sessionId` passed (999) is ignored for the *new* session's ID. The database auto-generates a new ID (e.g., `1`).
+> **Check the JSON response** to get the actual `id` of the created session.
 
 ```bash
 curl -X POST "http://localhost:8080/restaurant/submit" \
   -H "Content-Type: application/json" \
   -H "X-Username: alice" \
-  -d "{\"sessionId\": 100, \"name\": \"Alice's Salad\"}"
+  -d "{\"sessionId\": 999, \"sessionName\": \"Alice's Session\", \"name\": \"Alice's Salad\"}"
 ```
-**Expected:** `201 Created`. Session 100 is now created and owned by Alice.
+**Expected:** `201 Created`. Response body will contain the new session structure (e.g., `session: { "id": 1, ... }`).
 
 ### 3. Invite Guests (req 5)
-Alice invites `dave` to Session 100.
+Alice invites `dave` to the session.
+> **Note**: Replace `1` in the URL/body below with the **actual Session ID** from the previous step.
 
 ```bash
 curl -X POST "http://localhost:8080/session/invite" \
   -H "Content-Type: application/json" \
   -H "X-Username: alice" \
-  -d "{\"sessionId\": 100, \"usernames\": [\"dave\"]}"
+  -d "{\"sessionId\": 1, \"usernames\": [\"dave\"]}"
 ```
 **Expected:** `200 OK`.
 
 ### 4. Invited Guest Submission (req 5)
-`dave` submits to Session 100.
+`dave` submits to the session.
 
 ```bash
 curl -X POST "http://localhost:8080/restaurant/submit" \
   -H "Content-Type: application/json" \
   -H "X-Username: dave" \
-  -d "{\"sessionId\": 100, \"name\": \"Dave's Tacos\"}"
+  -d "{\"sessionId\": 1, \"name\": \"Dave's Tacos\"}"
 ```
 **Expected:** `201 Created`.
 
 ### 5. Uninvited Guest Rejection (req 5)
-`charlie` (authorized, but not invited to *this* session) tries to submit to Session 100.
+`charlie` (authorized, but not invited to *this* session) tries to submit to the session.
 
 ```bash
 curl -X POST "http://localhost:8080/restaurant/submit" \
   -H "Content-Type: application/json" \
   -H "X-Username: charlie" \
-  -d "{\"sessionId\": 100, \"name\": \"Charlie's Steak\"}"
+  -d "{\"sessionId\": 1, \"name\": \"Charlie's Steak\"}"
 ```
-**Expected:** `403 Forbidden`.
+**Expected:** `400 Bad Request`.
+
 
 ---
 
 ## Resetting
-To re-run scenarios, you can restart the application or use the reset endpoint on the global session (ID: 0):
+To re-run scenarios, you can restart the application or use the reset endpoint on the session to reopen the session for submissions:
 
 ```bash
-curl -X PATCH "http://localhost:8080/session/0/reset"
+curl -X PATCH "http://localhost:8080/session/{sessionId}/reset"
 ```

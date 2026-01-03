@@ -87,6 +87,7 @@ class RestaurantServiceTest {
         restaurant.setName("Kopitiam");
         when(repository.findRandomRestaurantBySession(1L)).thenReturn(Optional.of(restaurant));
         var session = new Session();
+        session.setId(sessionId);
         session.setCreatedBy("Test User");
         when(sessionService.getOpenSession(sessionId)).thenReturn(session);
 
@@ -102,6 +103,7 @@ class RestaurantServiceTest {
         long sessionId = 1L;
         when(repository.findRandomRestaurantBySession(sessionId)).thenReturn(Optional.empty());
         var session = new Session();
+        session.setId(sessionId);
         session.setCreatedBy("Test User");
         when(sessionService.getOpenSession(sessionId)).thenReturn(session);
 
@@ -118,6 +120,7 @@ class RestaurantServiceTest {
     void getRandomRestaurant_NotInitiator_ThrowException() {
         long sessionId = 1L;
         var session = new Session();
+        session.setId(sessionId);
         session.setCreatedBy("Some other user");
         when(sessionService.getOpenSession(sessionId)).thenReturn(session);
 

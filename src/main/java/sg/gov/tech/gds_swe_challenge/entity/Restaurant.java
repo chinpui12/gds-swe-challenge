@@ -21,7 +21,7 @@ public class Restaurant extends Auditable {
     @Column(nullable = false)
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "session_id", nullable = false)
     @JsonBackReference
     private Session session;

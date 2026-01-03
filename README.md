@@ -13,8 +13,13 @@ This application solves the "lunch location dilemma" by allowing teams to collec
 - **SpringDoc OpenAPI (Swagger)**: API documentation.
 
 ## Prerequisites
+### For Local Development
 - Java JDK 25
 - Maven 3.8+
+
+### For Containerized Run
+- Docker Desktop
+
 
 ## Getting Started
 
@@ -35,6 +40,30 @@ mvn spring-boot:run
 ```
 
 The application will start on `http://localhost:8080`.
+
+### 4. Run with Docker
+> [!IMPORTANT]
+> **Stop Local Instance**: If you have the application running locally via `mvn spring-boot:run`, you **MUST** stop it (Ctrl+C) before running with Docker to avoid port conflicts (Error `Bind for 0.0.0.0:8080 failed: port is already allocated`).
+
+To build and run the application without installing Java/Maven locally, you can use the provided convenience scripts:
+
+**Windows**:
+```cmd
+run.bat
+```
+
+**Linux/macOS**:
+```bash
+./run.sh
+```
+
+Alternatively, you can run directly with Docker Compose:
+```bash
+docker-compose up --build
+```
+
+The application will be available at `http://localhost:8080`.
+
 
 ## API Documentation & Verification
 The application provides a comprehensive Swagger UI for exploring and testing the APIs.
@@ -71,7 +100,12 @@ The application provides a comprehensive Swagger UI for exploring and testing th
 
 ### 3. Data Persistence
 - Uses H2 in-memory database.
+- **H2 Console**: [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
+  - **JDBC URL**: `jdbc:h2:mem:gds-swe-challenge-db`
+  - **User**: `sa`
+  - **Password**: (Empty)
 - Schema is managed via Liquibase changelogs (`src/main/resources/db/changelog`).
+
 
 ## Design Considerations
 - **Layered Architecture**: Controller -> Service -> Repository.

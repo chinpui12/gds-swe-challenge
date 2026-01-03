@@ -36,72 +36,60 @@ import java.util.List;
 @NullMarked
 @Tag(name = "Session API", description = "Session operations")
 public class SessionController {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SessionController.class);
-    private final SessionService service;
+        private static final Logger LOGGER = LoggerFactory.getLogger(SessionController.class);
+        private final SessionService service;
 
-    public SessionController(SessionService service) {
-        this.service = service;
-    }
+        public SessionController(SessionService service) {
+                this.service = service;
+        }
 
-    /**
-     * Retrieves all sessions regardless of state.
-     *
-     * @return {@link ResponseEntity}
-     */
-    @Operation(
-            summary = "Get all sessions",
-            description = "Returns complete list of sessions including GLOBAL and custom sessions"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Sessions retrieved successfully",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = Session.class)))
-            ),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping()
-    public ResponseEntity<List<Session>> getSessions() {
-        LOGGER.info("getSessions");
-        List<Session> sessions = service.getSessions();
-        return ResponseEntity.ok(sessions);
-    }
+        /**
+         * Retrieves all sessions regardless of state.
+         *
+         * @return {@link ResponseEntity}
+         */
+        @Operation(summary = "Get all sessions", description = "Returns complete list of sessions including GLOBAL and custom sessions")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Sessions retrieved successfully", content = @Content(array = @ArraySchema(schema = @Schema(implementation = Session.class)))),
+                        @ApiResponse(responseCode = "500", description = "Internal server error")
+        })
+        @GetMapping()
+        public ResponseEntity<List<Session>> getSessions() {
+                LOGGER.info("getSessions");
+                List<Session> sessions = service.getSessions();
+                return ResponseEntity.ok(sessions);
+        }
 
-    @Operation(
-            summary = "Reset session to OPEN state",
-            description = "Reopens closed session for new restaurant submissions"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Session reset successfully"),
-            @ApiResponse(responseCode = "400", description = "Session already open"),
-            @ApiResponse(responseCode = "404", description = "Session not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PatchMapping("/{sessionId}/reset")
-    public ResponseEntity<Session> resetSession(
-            @Parameter(description = "Session ID to reset")
-            @PathVariable(value = "sessionId") Long sessionId) {
-        LOGGER.info("Resetting session [id: {}]", sessionId);
-        Session resetSession = service.resetSession(sessionId);
-        return ResponseEntity.ok(resetSession);
-    }
+        @Operation(summary = "Reset session to OPEN state", description = "Reopens closed session for new restaurant submissions")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Session reset successfully"),
+                        @ApiResponse(responseCode = "400", description = "Session already open"),
+                        @ApiResponse(responseCode = "404", description = "Session not found"),
+                        @ApiResponse(responseCode = "500", description = "Internal server error")
+        })
+        @PatchMapping("/{sessionId}/reset")
+        public ResponseEntity<Session> resetSession(
+                        @Parameter(description = "Session ID to reset") @PathVariable(value = "sessionId") Long sessionId) {
+                LOGGER.info("Resetting session [id: {}]", sessionId);
+                Session resetSession = service.resetSession(sessionId);
+                return ResponseEntity.ok(resetSession);
+        }
 
-    /**
-     * ✅ Invite user to session (CREATOR ONLY)
-     */
-    @PostMapping("/invite")
-    @Operation(summary = "Invite user to session",
-            description = "Only session creator can invite. Session must be OPEN.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Users invited successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid inviter/closed session"),
-            @ApiResponse(responseCode = "403", description = "Not session creator"),
-            @ApiResponse(responseCode = "404", description = "Session/User not found")
-    })
-    public ResponseEntity<Session> inviteUser(
-            @RequestHeader("X-Username") String inviterUsername,
-            @Valid @RequestBody InviteUserRequest request) {
-        var session = service.inviteUser(request.sessionId(), inviterUsername, request.usernames());
-        return ResponseEntity.ok(session);
-    }
+        /**
+         * Invite user to session (CREATOR ONLY)
+         */
+        @PostMapping("/invite")
+        @Operation(summary = "Invite user to session", description = "Only session creator can invite. Session must be OPEN.")
+        @ApiResponses({
+                        @ApiResponse(responseCode = "200", description = "Users invited successfully"),
+                        @ApiResponse(responseCode = "400", description = "Invalid inviter/closed session"),
+                        @ApiResponse(responseCode = "403", description = "Not session creator"),
+                        @ApiResponse(responseCode = "404", description = "Session/User not found")
+        })
+        public ResponseEntity<Session> inviteUser(
+                        @RequestHeader("X-Username") String inviterUsername,
+                        @Valid @RequestBody InviteUserRequest request) {
+                var session = service.inviteUser(request.sessionId(), inviterUsername, request.usernames());
+                return ResponseEntity.ok(session);
+        }
 }
