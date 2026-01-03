@@ -15,7 +15,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
      */
     @Query(value = """
             SELECT r.* FROM restaurant r
-            INNER JOIN restaurant_session s ON r.session_name = s.session_name
+            INNER JOIN session s ON r.session_id = s.id
             WHERE s.id = :sessionId
             ORDER BY RANDOM()
             LIMIT 1
